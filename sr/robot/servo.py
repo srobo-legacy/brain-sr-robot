@@ -39,6 +39,7 @@ class Servo(object):
         if index < 0 or index > 12:
             return
         # Limit the value to within the valid range
+        value = int(value)
         if value > POS_MAX:
             value = POS_MAX
         elif value < POS_MIN:
