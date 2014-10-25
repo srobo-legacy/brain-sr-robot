@@ -43,7 +43,7 @@ class Servo(object):
             value = POS_MAX
         elif value < POS_MIN:
             value = POS_MIN
-        self.handle.controlWrite(0, req_id, value, index, "")
+        self.handle.controlWrite(0, req_id, int(value), index, "")
 
     def __repr__(self):
         return "Servo( serialnum = \"{0}\" )".format( self.serialnum )
