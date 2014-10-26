@@ -36,8 +36,8 @@ class Servo(object):
         self.handle.close()
 
     def __setitem__(self, index, value):
-        if index < 0 or index > 12:
-            return
+        if not 0 <= index < 12:
+            raise IndexError('servo index out of range')
         # Limit the value to within the valid range
         if value > POS_MAX:
             value = POS_MAX
