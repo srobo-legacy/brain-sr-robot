@@ -1,7 +1,6 @@
 import logging
 import threading
 import serial
-import usbenum
 
 SERIAL_BAUD = 1000000
 
@@ -20,9 +19,6 @@ PWM_MAX = 100
 USB_MODEL = "MCV4B"
 
 logger = logging.getLogger( "sr.motor" )
-
-def find_devs():
-    return usbenum.list_usb_devices(USB_MODEL)
 
 class IncorrectFirmware(Exception):
     pass
