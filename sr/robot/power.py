@@ -47,6 +47,7 @@ class Power:
     CMD_WRITE_output5 = 5
     CMD_WRITE_runled = 6
     CMD_WRITE_errorled = 7
+    CMD_WRITE_piezo = 8
     CMD_READ_output0 = 0
     CMD_READ_output1 = 1
     CMD_READ_output2 = 2
@@ -98,3 +99,17 @@ class Power:
     		return False
     	else:
     		return True
+    
+    def buzz_piezo(self, freq, duration):
+        data = struct.pack("HH", freq, duration)
+        self.handle.controlWrite(0, 64, 0, Power.CMD_WRITE_piezo, data)
+
+    def beep(self, duration, note='c'):
+	notes = { 
+	    'c': 261, 'd': 294, 'e': 329,
+	    'f': 349, 'g': 392, 'a': 440,
+	    'b': 493, 'uc': 523
+	}
+	note = notes.get(note)
+	if note is not None:
+            self.buzz_piezo(note, duration)
