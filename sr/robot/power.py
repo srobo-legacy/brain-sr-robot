@@ -104,19 +104,68 @@ class Power:
         data = struct.pack("HH", frequency, duration)
         self.handle.controlWrite(0, 64, 0, Power.CMD_WRITE_piezo, data)
 
-    def beep(self, duration, note=None, frequency=None):
+    def enqueue_beeps(self, beeps):
+        data = ""
+        for duration, frequency in beeps:
+            data += struct.pack("HH", frequency, duration)
+        self.handle.controlWrite(0, 64, 0, Power.CMD_WRITE_piezo, data)
+
+    @staticmethod
+    def note_to_freq(notestr):
 	notes = { 
 	    'c': 261, 'd': 294, 'e': 329,
 	    'f': 349, 'g': 392, 'a': 440,
 	    'b': 493, 'uc': 523
 	}
-        if note is not None:
-	    note_frequency = notes.get(note.lower())
-	    if note_frequency is not None:
-                self.buzz_piezo(duration, note_frequency)
+
+        try:
+            return notes[notestr]
+        except KeyError:
+            raise ValueError('{} is not a recognised note.'.format(notestr))
+
+    def beep(self, duration, note=None, frequency=None):
+        """Emit one or more beeps from the power board.
+
+        This function supports three types of beeping:
+
+        1) Single beep, described with a note string: beep(100, note="a")
+
+        2) Single beep, described with a frequency:  beep(100, frequency=440)
+
+        3) Multiple beeps, described with a sequence of (duration, note/frequency)
+           tuples: beep( ((100,"a"), (200,"b"), (300, 440)) )"""
+
+        if not hasattr(duration, "__iter__"):
+            "We have been provided with a single beep to emit"
+            if None not in (note,frequency):
+                "A note and a frequency have been specified at the same time"
+                raise ValueError("Note and frequency specified for beep")
+
+            if note is not None:
+                beeps = ((duration, note),)
+            elif frequency is not None:
+                beeps = ((duration, frequency),)
             else:
-                raise ValueError('{} is not a recognised note.'.format(note))
-        elif frequency is not None:
-            self.buzz_piezo(duration, frequency)
+                beeps = ((duration, 440),)
+
+        elif note is not None or frequency is not None:
+            "note arguments provided along with frequency arguments"
+            raise ValueError("Invalid argument combination: Beep list provided with note and frequency arguments.")
+
         else:
-            raise ValueError('`note` must be either a recognised note character or `frequency` an integer frequency.')
+            "We have a list of beeps"
+            beeps = duration
+
+        output_beeps = []
+
+        for duration, freq_desc in beeps:
+            "Convert all 'notes' into frequencies"
+
+            if isinstance(freq_desc, str):
+                freq = self.note_to_freq(freq_desc)
+            else:
+                freq = int(freq_desc)
+
+            output_beeps.append( (int(duration), freq) )
+
+        self.enqueue_beeps(output_beeps)
