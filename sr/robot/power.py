@@ -21,18 +21,35 @@ class Battery(object):
     	current, voltage = struct.unpack("ii", result)
     	return voltage, current
 
+
 class Outputs(object):
+    NUM_OUTPUTS = 6
+
+    @classmethod
+    def _check_index(cls, verb, index):
+        if index >= cls.NUM_OUTPUTS or index < 0:
+            msg = "{0} out-of-range rail address ({1})".format(verb, index)
+            raise IndexError(msg)
+
     def __init__(self, handle):
         self.handle = handle
+        # Set initial state to match the board itself, we cache the
+        # assigned values since there isn't currently a way to query them.
+        self._output_states = [True] * self.NUM_OUTPUTS
+
+    def __getitem__(self, index):
+        self._check_index("Getting", index)
+        return self._output_states[index]
 
     def __setitem__(self, index, value):
-    	if index > 5 or index < 0:
-    		raise Exception("Setting out-of-range rail address")
+    	self._check_index("Setting", index)
 
     	if value:
     		val = True
     	else:
     		val = False
+
+    	self._output_states[index] = val
 
     	cmd = Power.CMD_WRITE_output0 + index
     	self.handle.controlWrite(0, 64, val, cmd, 0)
