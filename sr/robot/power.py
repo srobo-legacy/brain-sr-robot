@@ -27,6 +27,10 @@ class Outputs(object):
 
     @classmethod
     def _check_index(cls, verb, index):
+        if not isinstance( index, (int, long) ):
+            msg = "{0} invalid rail address ({1})".format(verb, repr(index))
+            raise TypeError(msg)
+
         if index >= cls.NUM_OUTPUTS or index < 0:
             msg = "{0} out-of-range rail address ({1})".format(verb, index)
             raise IndexError(msg)
