@@ -22,23 +22,22 @@ def setup_logging():
     logger.addHandler(h)
 
 class NoCameraPresent(Exception):
-    "Camera not connected."
-
+    '''Exception for when no camera can be found'''
     def __str__(self):
         return "No camera found."
 
 class AlreadyInitialised(Exception):
-    "The robot has been initialised twice"
+    '''Exception when the robot has already been initialised'''
     def __str__(self):
         return "Robot object can only be initialised once."
 
 class UnavailableAfterInit(Exception):
-    "The called function is unavailable after init()"
+    '''Exception when a function is called which is unavailable after a call to init()'''
     def __str__(self):
         return "The called function is unavailable after init()"
 
 def pre_init(f):
-    "Decorator for functions that may only be called before init()"
+    '''Decorator for functions that may only be called before init()'''
 
     def g(self, *args, **kw):
         if self._initialised:
@@ -49,13 +48,24 @@ def pre_init(f):
     return g
 
 class Robot(object):
-    """Class for initialising and accessing robot hardware"""
+    '''Class for initialising and accessing robot hardware'''
     SYSLOCK_PATH = "/tmp/robot-object-lock"
 
     def __init__( self,
                   quiet = False,
                   init = True,
                   config_logging = True ):
+        '''Creates the class for initialising and accessing robot hardware
+
+        Parameters
+        ----------
+        quiet : bool, optional
+            Enables additional output (defaults to False, disables additional output)
+        init : bool, optional
+            Enables initialisation of hardware and waiting for the start signal (defaults to True)
+        config_logging : bool, optional
+            Setups logging (defaults to True, logging is setup)
+        '''
         if config_logging:
             setup_logging()
 
@@ -76,6 +86,8 @@ class Robot(object):
 
     @classmethod
     def setup(cls, quiet = False, config_logging = True ):
+        '''Creates class without starting to allow for custom ruggeduino firmware
+        https://www.studentrobotics.org/docs/programming/sr/#CustomRobotInit'''
         if config_logging:
             setup_logging()
 
@@ -86,7 +98,7 @@ class Robot(object):
                     config_logging = False )
 
     def init(self):
-        "Find and initialise hardware"
+        '''Find and initialise hardware'''
         if self._initialised:
             raise AlreadyInitialised()
 
