@@ -22,25 +22,27 @@ class IgnoredRuggeduino(object):
         return "IgnoredRuggeduino( serialnum = \"{0}\" )".format( self.serialnum )
 
 class RuggeduinoCmdBase(object):
-    """Base class for talking to a Ruggeduino that supports the SR command protocol"""
+    '''Base class for talking to a Ruggeduino that supports the SR command protocol'''
     def __init__(self, path):
+        '''Initiates communication with the Ruggeduino using Serial communication with the specified path'''
         self.serial = serial.Serial(path, SERIAL_BAUD, timeout=0.1)
 
         # Lock that must be acquired for use of the serial device
         self.lock = threading.Lock()
 
     def close(self):
+        '''Closes the serial communication with the Ruggeduino'''
         self.serial.close()
 
     def command(self, data):
-        """Send a command to the Ruggeduino and return the response.
+        '''Send a command to the Ruggeduino and return the response.
 
         Writes the command data as bytes to the serial connection, then
         reads a line of returned data. In the even that the read does not
         contain anything useful (ie has zero size or doesn't end with a
         newline character) then retry up to COMMAND_RETRIES times.
 
-        Returns the response from the device."""
+        Returns the response from the device.'''
 
         # The lock must have been acquired to talk to the device
         assert self.lock.locked(), "Must acquire lock to talk to ruggeduino"
@@ -55,14 +57,15 @@ class RuggeduinoCmdBase(object):
                       + "command '{0}'.".format(command))
 
     def firmware_version_read(self):
-        "Read the firmware version from the device"
+        '''Returns the firmware version from the device'''
 
         with self.lock:
             return self.command('v')
 
 class Ruggeduino(RuggeduinoCmdBase):
-    """Class for talking to a Ruggeduino flashed with the SR firmware"""
+    '''Class for talking to a Ruggeduino flashed with the SR firmware'''
     def __init__(self, path, serialnum = None):
+        '''Initialises communication with the Ruggeduino and checks that it has SR firmware'''
         RuggeduinoCmdBase.__init__(self, path)
         self.serialnum = serialnum
 
@@ -70,7 +73,7 @@ class Ruggeduino(RuggeduinoCmdBase):
             logger.warning( "Ruggeduino is not running the SR firmware" )
 
     def _is_srduino(self):
-        "Determine if the board is flashed with the SR firmware"
+        '''Returns whether the board is flashed with the SR firmware'''
         v = self.firmware_version_read()
 
         if v.split(":")[0] == "SRduino":
@@ -79,11 +82,11 @@ class Ruggeduino(RuggeduinoCmdBase):
             return False
 
     def _encode_pin(self, pin):
-        "Encode a pin number in ascii"
+        '''Returns an encoded pin number in ascii'''
         return chr(ord('a') + pin)
 
     def pin_mode(self, pin, mode):
-        "Set the mode of a pin"
+        '''Set the mode of a pin'''
         MODES = {INPUT: 'i',
                  OUTPUT: 'o',
                  INPUT_PULLUP: 'p'}
@@ -91,18 +94,18 @@ class Ruggeduino(RuggeduinoCmdBase):
             self.command(MODES[mode] + self._encode_pin(pin))
 
     def digital_read(self, pin):
-        "Read a digital input"
+        '''Returns the state of a digital input pin'''
         with self.lock:
             response = self.command('r' + self._encode_pin(pin))
             return True if response[0] == 'h' else False
 
     def digital_write(self, pin, level):
-        "Write to an output"
+        '''Writes to an output pin'''
         with self.lock:
             self.command(('h' if level else 'l') + self._encode_pin(pin))
 
     def analogue_read(self, pin):
-        "Read an analogue input"
+        '''Returns the value from an analogue input pin'''
         with self.lock:
             response = self.command('a' + self._encode_pin(pin))
         return (int(response)/1023.0)*5.0
