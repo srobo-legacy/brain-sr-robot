@@ -114,12 +114,14 @@ marker_luts = { "dev": { "A": create_marker_lut(0, marker_group_counts["dev"]),
 
 MarkerBase = namedtuple( "Marker", "info timestamp res vertices centre orientation" ) 
 class Marker(MarkerBase):
+    '''Marker class'''
     def __init__( self, *a, **kwd ):
         # Aliases
         self.dist = self.centre.polar.length
         self.rot_y = self.centre.polar.rot_y
 
 class Timer(object):
+    '''Timer class'''
     def __enter__(self):
         self.start = time.time()
 
@@ -128,7 +130,9 @@ class Timer(object):
         return False
 
 class Vision(object):
+    '''Vision class'''
     def __init__(self, camdev, lib):
+        '''Initiates the vision system using the camera connection provided'''
         self.koki = pykoki.PyKoki(lib)
         self._camdev = camdev
         self.camera = self.koki.open_camera(self._camdev)
@@ -153,6 +157,7 @@ class Vision(object):
         self._stop()
 
     def _init_focal_length(self):
+        '''Determine the focal length of the camera'''
         vendor_product_re = re.compile(".* ([0-9A-Za-z]+):([0-9A-Za-z]+) ")
         p = subprocess.Popen(["lsusb"], stdout=subprocess.PIPE)
         stdout, _ = p.communicate()
@@ -164,7 +169,7 @@ class Vision(object):
                return
 
     def _set_res(self, res):
-        "Set the resolution of the camera if different to what we were"
+        '''Set the resolution of the camera'''
         if res == self._res:
             "Resolution already the requested one"
             return
@@ -193,15 +198,18 @@ class Vision(object):
             self._start()
 
     def _stop(self):
+        '''Stops the stream from the camera'''
         self.camera.stop_stream()
         self._streaming = False
 
     def _start(self):
+        '''Starts a stream from the camera'''
         self.camera.prepare_buffers(1)
         self.camera.start_stream()
         self._streaming = True
 
     def _width_from_code(self, lut, code):
+        '''Returns the size of lut[code]'''
         if code not in lut:
             # We really want to ignore these...
             return 0.1
@@ -209,6 +217,7 @@ class Vision(object):
         return lut[code].size
 
     def see(self, mode, arena, res, stats):
+        '''Returns what markers the camera can see'''
         self.lock.acquire()
         self._set_res(res)
 

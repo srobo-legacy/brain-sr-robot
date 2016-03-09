@@ -22,23 +22,22 @@ def setup_logging():
     logger.addHandler(h)
 
 class NoCameraPresent(Exception):
-    "Camera not connected."
-
+    '''Exception for when no camera can be found'''
     def __str__(self):
         return "No camera found."
 
 class AlreadyInitialised(Exception):
-    "The robot has been initialised twice"
+    '''Exception when the robot has already been initialised'''
     def __str__(self):
         return "Robot object can only be initialised once."
 
 class UnavailableAfterInit(Exception):
-    "The called function is unavailable after init()"
+    '''Exception when a function is called which is unavailable after a call to init()'''
     def __str__(self):
         return "The called function is unavailable after init()"
 
 def pre_init(f):
-    "Decorator for functions that may only be called before init()"
+    '''Decorator for functions that may only be called before init()'''
 
     def g(self, *args, **kw):
         if self._initialised:
@@ -49,13 +48,24 @@ def pre_init(f):
     return g
 
 class Robot(object):
-    """Class for initialising and accessing robot hardware"""
+    '''Class for initialising and accessing robot hardware'''
     SYSLOCK_PATH = "/tmp/robot-object-lock"
 
     def __init__( self,
                   quiet = False,
                   init = True,
                   config_logging = True ):
+        '''Creates the class for initialising and accessing robot hardware
+
+        Parameters
+        ----------
+        quiet : bool, optional
+            Enables additional output (defaults to False, disables additional output)
+        init : bool, optional
+            Enables initialisation of hardware and waiting for the start signal (defaults to True)
+        config_logging : bool, optional
+            Sets up logging (defaults to True, logging is setup)
+        '''
         if config_logging:
             setup_logging()
 
@@ -76,6 +86,8 @@ class Robot(object):
 
     @classmethod
     def setup(cls, quiet = False, config_logging = True ):
+        '''Creates class without starting to allow for custom ruggeduino firmware
+        https://www.studentrobotics.org/docs/programming/sr/#CustomRobotInit'''
         if config_logging:
             setup_logging()
 
@@ -86,7 +98,7 @@ class Robot(object):
                     config_logging = False )
 
     def init(self):
-        "Find and initialise hardware"
+        '''Find and initialise hardware'''
         if self._initialised:
             raise AlreadyInitialised()
 
@@ -100,6 +112,7 @@ class Robot(object):
         self._initialised = True
 
     def _acquire_syslock(self):
+        '''Aquires a lock'''
         try:
             # Create the file
             self._syslock = os.open( self.SYSLOCK_PATH,
@@ -108,7 +121,7 @@ class Robot(object):
             raise Exception( "Robot lock could not be acquired. Have you created more than one Robot() object?" )
 
     def _dump_devs(self):
-        "Write a list of relevant devices out to the log"
+        '''Write a list of relevant devices out to the log'''
         logger.info( "Found the following devices:" )
 
         self._dump_power()
@@ -118,7 +131,7 @@ class Robot(object):
         self._dump_webcam()
 
     def _dump_webcam(self):
-        "Write information about the webcam to stdout"
+        '''Write information about the webcam to the log'''
 
         if not hasattr(self, "vision"):
             "No webcam"
@@ -128,7 +141,7 @@ class Robot(object):
         logger.info( " - Webcam" )
 
     def _dump_power(self):
-        "Write information about the power board to stdout"
+        '''Write information about the power board to the log'''
         if self.power is None:
             "No power board!"
             return
@@ -136,7 +149,7 @@ class Robot(object):
         logger.info( " - {0}".format(self.power) )
 
     def _dump_usbdev_dict(self, devdict, name ):
-        "Write the contents of a device dict to stdout"
+        '''Write the contents of a device dict to the log'''
 
         if len(devdict) == 0:
             return
@@ -152,7 +165,7 @@ class Robot(object):
                            "motor": motor } )
 
     def _parse_cmdline(self):
-        "Parse the command line arguments"
+        '''Parse the command line arguments'''
         parser = optparse.OptionParser()
 
         parser.add_option( "--usbkey", type="string", dest="usbkey",
@@ -166,7 +179,7 @@ class Robot(object):
         self.startfifo = options.startfifo
 
     def wait_start(self):
-        "Wait for the start signal to happen"
+        '''Wait for the start signal to occur'''
         logger.info( "Waiting for start signal." )
 
         f = open( self.startfifo, "r" )
@@ -189,22 +202,25 @@ class Robot(object):
 
     @pre_init
     def ruggeduino_set_handler_by_id( self, r_id, handler ):
+        '''Adds a handler referenced by ID, has to be before init()'''
         logger.debug( "Ruggeduino handler set for ID '%s'", r_id )
         self._ruggeduino_id_handlers[ r_id ] = handler
 
     @pre_init
     def ruggeduino_set_handler_by_fwver( self, fwver, handler ):
+        '''Adds a handler referenced by firmware version, has to be before init()'''
         logger.debug( "Ruggeduino handler set for firmware version '%s'", fwver )
         self._ruggeduino_fwver_handlers[ fwver ] = handler
 
     @pre_init
     def ruggeduino_ignore_id( self, r_id ):
+        '''Ignores a selected ID, has to be before init()'''
         "Ignore the Ruggeduino with the given ID"
         logger.debug( "Ruggeduino ID '%s' set to be ignored", r_id )
         self.ruggeduino_set_handler_by_id( r_id, ruggeduino.IgnoredRuggeduino )
 
     def _init_devs(self):
-        "Initialise the attributes for accessing devices"
+        '''Initialise the attributes for accessing devices'''
 
         # Power board
         self._init_power()
@@ -216,6 +232,7 @@ class Robot(object):
         self._init_ruggeduinos()
 
     def _init_power(self):
+        '''Connects to power board and brings up all rails'''
         boards = self._init_usb_devices("Power_board_v4", power.Power)
         if len(boards):
             self.power = boards[0]
@@ -229,12 +246,15 @@ class Robot(object):
             self.power = None
 
     def _init_motors(self):
+        '''Connects to the motor boards'''
         self.motors = self._init_usb_devices("MCV4B", motor.Motor, subsystem="tty")
 
     def _init_servos(self):
+        '''Connects to the servo boards'''
         self.servos = self._init_usb_devices("Servo_Board_v4", servo.Servo)
 
     def _init_ruggeduinos(self):
+        '''Connects to the Ruggeduinos'''
         self.ruggeduinos = {}
 
         for n, dev in enumerate( self._list_usb_devices( "Ruggeduino", subsystem="tty" ) ):
@@ -262,7 +282,7 @@ class Robot(object):
             self.ruggeduinos[snum] = srdev
 
     def _list_usb_devices(self, model, subsystem=None):
-        "Create a sorted list of USB devices of the given type"
+        '''Returns a sorted list of USB devices of the given type'''
         def _udev_compare_serial(x, y):
             """Compare two udev serial numbers"""
             return cmp(x["ID_SERIAL_SHORT"],
@@ -275,6 +295,7 @@ class Robot(object):
         return devs
 
     def _init_usb_devices(self, model, ctor, subsystem=None):
+        '''Generates a dictionary of USB devices, each device appears twice, once with its serial number, the other with an integer key'''
         devs = self._list_usb_devices( model, subsystem )
 
         # Devices stored in a dictionary
@@ -306,6 +327,7 @@ class Robot(object):
         return srdevs
 
     def _init_vision(self):
+        '''Attempts to initialise a camera if connected'''
         udev = pyudev.Context()
         cams = list(udev.list_devices( subsystem="video4linux",
                                        # For now, find devices that use this driver
@@ -335,6 +357,7 @@ class Robot(object):
         self.vision = v
 
     def see(self, res = (800,600), stats = False):
+        '''Returns what the camera can see, raises NoCameraPresent exception in the absence of a camera'''
         if not hasattr( self, "vision" ):
             raise NoCameraPresent()
 
