@@ -9,8 +9,23 @@ POS_MAX = 100
 logger = logging.getLogger( "sr.servo" )
 
 class Servo(object):
-    "A servo board"
+    '''Class to interface with a servo board'''
     def __init__(self, path, busnum, devnum, serialnum = None):
+        '''Creates an interface to a servo board
+
+        Initiates a connection to a servo board
+
+        Parameters
+        ----------
+        path : str
+            Unused parameter
+        busnum : int
+            Bus number to find connection
+        devnum : int
+            Device Address to find connection
+        serialnum : str, optional
+            The serial number of the power board (the default is None)
+        '''
         self.serialnum = serialnum
 
         self.ctx = usb1.USBContext()
@@ -26,6 +41,7 @@ class Servo(object):
         self.init_board()
 
     def init_board(self):
+        '''Attempts to initialise servo board, raises Exception if fails'''
         self.handle.controlWrite(0, req_id, 0, 12, "")
         try:
             for i in range(12):
@@ -34,6 +50,7 @@ class Servo(object):
             raise Exception("Failed to initialise servo board. Have you connected its 12V input to the power board?")
 
     def close(self):
+        '''Closes connection to servo board'''
         self.handle.close()
 
     def __getitem__(self, index):
