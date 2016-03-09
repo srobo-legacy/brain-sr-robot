@@ -24,6 +24,7 @@ EXPECTED_FW_VER = "MCV4B:3\n"
 logger = logging.getLogger( "sr.motor" )
 
 class IncorrectFirmware(Exception):
+    '''Exception for when incorrect firmware is found within a motor controller'''
     def __init__(self, serialnum, actual_fw):
         self.serialnum = serialnum
         self.actual_fw = actual_fw
@@ -32,6 +33,7 @@ class IncorrectFirmware(Exception):
         super(IncorrectFirmware, self).__init__(msg)
 
 class FirmwareReadFail(Exception):
+    '''Exception for when reading the firmware of a motor controller fails'''
     def __init__(self, serialnum):
         self.serialnum = serialnum
         msg = "Failed to read firmware version from motor controller '{0}'.".format(serialnum) \
@@ -39,9 +41,26 @@ class FirmwareReadFail(Exception):
         super(FirmwareReadFail, self).__init__(msg)
 
 class Motor(object):
-    "A motor"
+    '''Class to interface with a motor board, supports context management'''
     def __init__(self, path, busnum, devnum,
                  serialnum = None, check_fwver = True):
+        ''' Creates an interface to a motor board
+
+        Initiates a connection to a motor board via Serial communication
+
+        Parameters
+        ----------
+        path : str
+            The path to the serial device to communicate with the motor board
+        busnum : int
+            Unused parameter
+        devnum : int
+            Unused parameter
+        serialnum : str, optional
+            The serial number of the motor board (the default is None)
+        check_fwver : bool, optional
+            Whether or not to check the firmware of the motor board is as expected, throws IncorrectFirmware if set to True and firmware is not expected (the default is True, does check the firmware version)
+        '''
         self.serialnum = serialnum
         self.serial = serial.Serial(path, SERIAL_BAUD, timeout=0.1)
         self.lock = threading.Lock()
@@ -64,9 +83,11 @@ class Motor(object):
         self.close()
 
     def close(self):
+        '''Closes the serial communication with the motor'''
         self.serial.close()
 
     def _get_fwver(self):
+        '''Attempts to get the firmware version of the motor, throws FirmwareReadFail exception if unsuccessful'''
         for x in range(10):
             # We make repeat attempts at reading the firmware version
             # because the motor controller may have only just been powered-up.
@@ -85,7 +106,7 @@ class Motor(object):
         return "Motor( serialnum = \"{0}\" )".format( self.serialnum )
 
     def _jump_to_bootloader(self):
-        "Jump to the bootloader"
+        '''Jumps to the bootloader'''
         MAGIC = "Entering bootloader\n"
 
         # Up the timeout to ensure bootloader response is received
@@ -106,7 +127,21 @@ class Motor(object):
         self.serial.read()
 
 class MotorChannel(object):
+    '''Class to interface with a motor channel of a motor board'''
     def __init__(self, serial, lock, channel):
+        '''Interface to a motor upon a motor board
+
+        Description
+
+        Paramters
+        --------
+        serial : Serial object
+            The serial interface to the motor board
+        lock : Lock object
+            Threading lock object to block should another thread be using the interface
+        channel : int
+            The motor from the motor board to communicate with
+        '''
         self.serial = serial
         self.lock = lock
         self.channel = channel
@@ -118,15 +153,17 @@ class MotorChannel(object):
         self._power = 0
 
     def _encode_speed(self, speed):
+        '''Encodes the speed (int)'''
         return chr(speed + 128)
 
     @property
     def power(self):
+        '''Gets the power of the motor'''
         return self._power
 
     @power.setter
     def power(self, value):
-        "target setter function"
+        '''Sets the power of the motor'''
         value = int(value)
         self._power = value
 
@@ -149,11 +186,12 @@ class MotorChannel(object):
 
     @property
     def use_brake(self):
-        "Whether to use the brake when at 0 speed"
+        '''Returns whether the brake is used when power of the motor is 0'''
         return self._use_brake
 
     @use_brake.setter
     def use_brake(self, value):
+        '''Sets whether the brake is used when power of the motor is 0'''
         self._use_brake = value
 
         if self.power == 0:
