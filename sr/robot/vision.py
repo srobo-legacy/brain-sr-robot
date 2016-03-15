@@ -138,16 +138,10 @@ class Vision(object):
 
         # Lock for the use of the vision
         self.lock = threading.Lock()
-        self.lock.acquire()
 
         self._res = None
         self._buffers = None
         self._streaming = False
-
-        # Default to 800x600        
-        self._set_res( (800,600) )
-        self._start()
-        self.lock.release()
 
     def __del__(self):
         self._stop()
@@ -211,6 +205,9 @@ class Vision(object):
     def see(self, mode, arena, res, stats):
         self.lock.acquire()
         self._set_res(res)
+
+        if not self._streaming:
+            self._start()
 
         acq_time = time.time()
 
